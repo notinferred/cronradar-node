@@ -1,0 +1,38 @@
+{
+  "name": "cronradar",
+  "version": "1.0.0",
+  "description": "Dead-simple cron job monitoring with auto-registration. Two functions: ping() and syncMonitor(). Self-healing monitors.",
+  "main": "src/index.js",
+  "types": "src/index.d.ts",
+  "keywords": [
+    "cron",
+    "monitoring",
+    "scheduler",
+    "job",
+    "task",
+    "ping",
+    "sync",
+    "auto-register",
+    "bull",
+    "agenda",
+    "node-cron"
+  ],
+  "author": "Administrator <contact@cronradar.com>",
+  "license": "proprietary",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/cronradar/cronradar-node.git"
+  },
+  "bugs": {
+    "url": "https://github.com/cronradar/cronradar-node/issues"
+  },
+  "homepage": "https://cronradar.com/docs",
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "files": [
+    "src/index.js",
+    "src/index.d.ts",
+    "README.md"
+  ]
+}
