@@ -17,7 +17,30 @@ const cronradar = require('cronradar');
 await cronradar.monitor('daily-backup');
 
 // With self-healing (auto-register if monitor doesn't exist)
-await cronradar.monitor('daily-backup', '0 2 * * *');
+await cronradar.monitor('daily-backup', { schedule: '0 2 * * *' });
+```
+
+## Lifecycle Tracking
+
+**Option 1: Wrapper (Automatic)**
+```javascript
+const backupJob = cronradar.wrap('daily-backup', async () => {
+  await runBackup();
+}, { schedule: '0 2 * * *' });
+
+await backupJob();
+```
+
+**Option 2: Manual**
+```javascript
+await cronradar.startJob('daily-backup');
+try {
+  await runBackup();
+  await cronradar.completeJob('daily-backup');
+} catch (error) {
+  await cronradar.failJob('daily-backup', error.message);
+  throw error;
+}
 ```
 
 ## Configuration

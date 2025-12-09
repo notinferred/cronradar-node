@@ -35,7 +35,7 @@ async function monitor(monitorKey, options = {}) {
       console.error(`[CronRadar] Monitor '${monitorKey}' not found. Auto-registering with schedule '${options.schedule}'...`);
 
       const source = detectSource();
-      await sync(monitorKey, options.schedule, { source });
+      await syncMonitor(monitorKey, options.schedule, { source });
 
       // Retry ping
       await sendPingInternal(monitorKey, apiKey);
@@ -44,6 +44,93 @@ async function monitor(monitorKey, options = {}) {
     // Never throw - protect user's job execution
     console.error(`[CronRadar] Error during ping: ${error.message}`);
   }
+}
+
+/**
+ * Signal that a job has started executing.
+ * Used for lifecycle tracking to detect hung jobs and measure execution duration.
+ *
+ * @param {string} monitorKey - The monitor key identifying your job
+ * @param {Object} [options] - Optional configuration
+ * @param {string} [options.schedule] - Cron expression for auto-registration
+ * @returns {Promise<void>}
+ */
+async function startJob(monitorKey, options = {}) {
+  try {
+    const apiKey = process.env.CRONRADAR_API_KEY || '';
+    if (!apiKey) return;
+
+    await sendLifecyclePing(monitorKey, 'start', apiKey, options);
+  } catch (error) {
+    console.error(`[CronRadar] Error during startJob: ${error.message}`);
+  }
+}
+
+/**
+ * Signal that a job has completed successfully.
+ * Used for lifecycle tracking to record completion time and calculate duration.
+ *
+ * @param {string} monitorKey - The monitor key identifying your job
+ * @returns {Promise<void>}
+ */
+async function completeJob(monitorKey) {
+  try {
+    const apiKey = process.env.CRONRADAR_API_KEY || '';
+    if (!apiKey) return;
+
+    await sendLifecyclePing(monitorKey, 'complete', apiKey);
+  } catch (error) {
+    console.error(`[CronRadar] Error during completeJob: ${error.message}`);
+  }
+}
+
+/**
+ * Signal that a job has failed.
+ * Triggers immediate alerts without waiting for grace period.
+ *
+ * @param {string} monitorKey - The monitor key identifying your job
+ * @param {string} [message] - Optional failure message for debugging
+ * @returns {Promise<void>}
+ */
+async function failJob(monitorKey, message = null) {
+  try {
+    const apiKey = process.env.CRONRADAR_API_KEY || '';
+    if (!apiKey) return;
+
+    await sendLifecyclePing(monitorKey, 'fail', apiKey, { message });
+  } catch (error) {
+    console.error(`[CronRadar] Error during failJob: ${error.message}`);
+  }
+}
+
+/**
+ * Wrap an async function with automatic lifecycle monitoring.
+ * Handles start/complete/fail signals automatically.
+ *
+ * Example:
+ *   const backupJob = cronradar.wrap('backup-job', async () => {
+ *     await runBackup();
+ *   });
+ *   await backupJob();
+ *
+ * @param {string} monitorKey - The monitor key identifying your job
+ * @param {Function} func - The async function to wrap
+ * @param {Object} [options] - Optional configuration
+ * @param {string} [options.schedule] - Cron expression for auto-registration
+ * @returns {Function} Wrapped function
+ */
+function wrap(monitorKey, func, options = {}) {
+  return async function(...args) {
+    await startJob(monitorKey, options);
+    try {
+      const result = await func(...args);
+      await completeJob(monitorKey);
+      return result;
+    } catch (error) {
+      await failJob(monitorKey, error.message);
+      throw error; // Re-raise to preserve original behavior
+    }
+  };
 }
 
 /**
@@ -58,7 +145,7 @@ async function monitor(monitorKey, options = {}) {
  * @param {number} [options.gracePeriod=60] - Grace period in seconds before alerting
  * @returns {Promise<void>}
  */
-async function sync(monitorKey, schedule, options = {}) {
+async function syncMonitor(monitorKey, schedule, options = {}) {
   try {
     const apiKey = process.env.CRONRADAR_API_KEY || '';
     if (!apiKey) {
@@ -79,7 +166,7 @@ async function sync(monitorKey, schedule, options = {}) {
       }]
     };
 
-    const url = new URL('/api/sync', 'https://api.cronradar.com');
+    const url = new URL('/api/sync', 'https://cron.life');
 
     const response = await makeRequest(url, {
       method: 'POST',
@@ -108,7 +195,7 @@ async function sync(monitorKey, schedule, options = {}) {
  */
 async function sendPingInternal(monitorKey, apiKey) {
   try {
-    const url = new URL(`/ping/${encodeURIComponent(monitorKey)}`, 'https://api.cronradar.com');
+    const url = new URL(`/ping/${encodeURIComponent(monitorKey)}`, 'https://cron.life');
 
     const response = await makeRequest(url, {
       method: 'GET',
@@ -121,6 +208,39 @@ async function sendPingInternal(monitorKey, apiKey) {
     return response.statusCode;
   } catch (error) {
     return null;
+  }
+}
+
+/**
+ * Send lifecycle ping (start/complete/fail) internally
+ * @private
+ */
+async function sendLifecyclePing(monitorKey, endpoint, apiKey, options = {}) {
+  try {
+    const url = new URL(`/ping/${encodeURIComponent(monitorKey)}/${endpoint}`, 'https://cron.life');
+
+    // Add query parameters
+    const params = new URLSearchParams();
+    if (options.schedule) {
+      params.append('schedule', options.schedule);
+    }
+    if (options.message) {
+      params.append('message', options.message);
+    }
+
+    if (params.toString()) {
+      url.search = params.toString();
+    }
+
+    await makeRequest(url, {
+      method: 'POST',
+      headers: {
+        'Authorization': 'Basic ' + Buffer.from(`${apiKey}:`).toString('base64')
+      },
+      timeout: 5000
+    });
+  } catch (error) {
+    // Silently fail to protect job execution
   }
 }
 
@@ -252,5 +372,9 @@ function generateReadableName(monitorKey) {
 
 module.exports = {
   monitor,
-  sync
+  startJob,
+  completeJob,
+  failJob,
+  wrap,
+  syncMonitor
 };
