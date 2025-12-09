@@ -17,18 +17,13 @@ const cronradar = require('cronradar');
 await cronradar.monitor('daily-backup');
 
 // With self-healing (auto-register if monitor doesn't exist)
-await cronradar.monitor('daily-backup', {
-  schedule: '0 2 * * *',
-  gracePeriod: 300
-});
+await cronradar.monitor('daily-backup', '0 2 * * *');
 ```
 
 ## Configuration
 
 Set environment variable:
 - `CRONRADAR_API_KEY`: Your API key from cronradar.com
-- `CRONRADAR_BASE_URL`: Base URL override (optional, default: `https://cronradar.com`)
-- `CRONRADAR_METHOD`: HTTP method for ping (optional, default: `GET`)
 
 ## Documentation
 

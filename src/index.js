@@ -35,10 +35,7 @@ async function monitor(monitorKey, options = {}) {
       console.error(`[CronRadar] Monitor '${monitorKey}' not found. Auto-registering with schedule '${options.schedule}'...`);
 
       const source = detectSource();
-      await sync(monitorKey, options.schedule, {
-        source,
-        gracePeriod: options.gracePeriod || 60
-      });
+      await sync(monitorKey, options.schedule, { source });
 
       // Retry ping
       await sendPingInternal(monitorKey, apiKey);
@@ -71,7 +68,6 @@ async function sync(monitorKey, schedule, options = {}) {
 
     const source = options.source || detectSource();
     const name = options.name || generateReadableName(monitorKey);
-    const gracePeriod = options.gracePeriod || 60;
 
     const syncRequest = {
       source,
@@ -79,12 +75,11 @@ async function sync(monitorKey, schedule, options = {}) {
         key: monitorKey,
         name,
         schedule,
-        gracePeriod
+        gracePeriod: 60
       }]
     };
 
-    const baseUrl = process.env.CRONRADAR_BASE_URL || 'https://cronradar.com';
-    const url = new URL('/api/sync', baseUrl);
+    const url = new URL('/api/sync', 'https://api.cronradar.com');
 
     const response = await makeRequest(url, {
       method: 'POST',
@@ -113,12 +108,10 @@ async function sync(monitorKey, schedule, options = {}) {
  */
 async function sendPingInternal(monitorKey, apiKey) {
   try {
-    const method = (process.env.CRONRADAR_METHOD || 'GET').toUpperCase();
-    const baseUrl = process.env.CRONRADAR_BASE_URL || 'https://cronradar.com';
-    const url = new URL(`/ping/${encodeURIComponent(monitorKey)}`, baseUrl);
+    const url = new URL(`/ping/${encodeURIComponent(monitorKey)}`, 'https://api.cronradar.com');
 
     const response = await makeRequest(url, {
-      method,
+      method: 'GET',
       headers: {
         'Authorization': 'Basic ' + Buffer.from(`${apiKey}:`).toString('base64')
       },
