@@ -14,10 +14,10 @@ npm install cronradar
 const cronradar = require('cronradar');
 
 // After your cron job completes successfully
-await cronradar.ping('daily-backup');
+await cronradar.monitor('daily-backup');
 
 // With self-healing (auto-register if monitor doesn't exist)
-await cronradar.ping('daily-backup', {
+await cronradar.monitor('daily-backup', {
   schedule: '0 2 * * *',
   gracePeriod: 300
 });
@@ -36,4 +36,6 @@ See [cronradar.com/docs](https://cronradar.com/docs) for full documentation.
 
 ## License
 
-MIT
+Proprietary - © 2025 CronRadar. All rights reserved.
+
+See [LICENSE](./LICENSE) for details. This SDK may only be used with the CronRadar monitoring service.

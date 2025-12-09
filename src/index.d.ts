@@ -2,7 +2,7 @@
  * CronRadar Node.js SDK TypeScript Definitions
  */
 
-export interface PingOptions {
+export interface MonitorOptions {
   /**
    * Cron expression for auto-registration if monitor doesn't exist
    */
@@ -32,25 +32,25 @@ export interface SyncOptions {
 }
 
 /**
- * Ping CronRadar to indicate your job has run successfully.
+ * Monitor a job execution by recording it in CronRadar.
  * Optionally provide schedule for self-healing (auto-registration on 404).
  *
  * @param monitorKey - The monitor key identifying your job
  * @param options - Optional configuration
- * @returns Promise that resolves when ping is complete
+ * @returns Promise that resolves when monitoring is complete
  */
-export function ping(monitorKey: string, options?: PingOptions): Promise<void>;
+export function monitor(monitorKey: string, options?: MonitorOptions): Promise<void>;
 
 /**
- * Register a monitor with CronRadar, setting up expectations for when it should run.
- * Used by extensions to sync discovered jobs.
+ * Pre-register a monitor with CronRadar, setting up expectations for when it should run.
+ * Used internally by extensions to sync discovered jobs. Advanced usage only.
  *
  * @param monitorKey - The unique identifier for this monitor
  * @param schedule - Cron expression defining when the job runs
  * @param options - Optional configuration
  * @returns Promise that resolves when sync is complete
  */
-export function syncMonitor(
+export function sync(
   monitorKey: string,
   schedule: string,
   options?: SyncOptions

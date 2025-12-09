@@ -1,7 +1,7 @@
 {
   "name": "cronradar",
-  "version": "1.0.0",
-  "description": "Dead-simple cron job monitoring with auto-registration. Two functions: ping() and syncMonitor(). Self-healing monitors.",
+  "version": "0.0.1",
+  "description": "Dead-simple cron job monitoring with auto-registration. One primary function: monitor(). Advanced: sync(). Self-healing monitors.",
   "main": "src/index.js",
   "types": "src/index.d.ts",
   "keywords": [

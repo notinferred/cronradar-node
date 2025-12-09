@@ -2,7 +2,7 @@
  * CronRadar Node.js SDK
  *
  * Dead-simple cron job monitoring with auto-registration support.
- * Two main functions: ping() for execution confirmation, syncMonitor() for registration.
+ * Primary function: monitor() for execution confirmation. Advanced: sync() for pre-registration.
  */
 
 const https = require('https');
@@ -10,7 +10,7 @@ const http = require('http');
 const { URL } = require('url');
 
 /**
- * Ping CronRadar to indicate your job has run successfully.
+ * Monitor a job execution by recording it in CronRadar.
  * Optionally provide schedule for self-healing (auto-registration on 404).
  *
  * @param {string} monitorKey - The monitor key identifying your job
@@ -19,7 +19,7 @@ const { URL } = require('url');
  * @param {number} [options.gracePeriod] - Grace period in seconds for auto-registration
  * @returns {Promise<void>}
  */
-async function ping(monitorKey, options = {}) {
+async function monitor(monitorKey, options = {}) {
   try {
     const apiKey = process.env.CRONRADAR_API_KEY || '';
     if (!apiKey) {
@@ -35,7 +35,7 @@ async function ping(monitorKey, options = {}) {
       console.error(`[CronRadar] Monitor '${monitorKey}' not found. Auto-registering with schedule '${options.schedule}'...`);
 
       const source = detectSource();
-      await syncMonitor(monitorKey, options.schedule, {
+      await sync(monitorKey, options.schedule, {
         source,
         gracePeriod: options.gracePeriod || 60
       });
@@ -50,8 +50,8 @@ async function ping(monitorKey, options = {}) {
 }
 
 /**
- * Register a monitor with CronRadar, setting up expectations for when it should run.
- * Used by extensions to sync discovered jobs.
+ * Pre-register a monitor with CronRadar, setting up expectations for when it should run.
+ * Used internally by extensions to sync discovered jobs. Advanced usage only.
  *
  * @param {string} monitorKey - The unique identifier for this monitor
  * @param {string} schedule - Cron expression defining when the job runs
@@ -61,7 +61,7 @@ async function ping(monitorKey, options = {}) {
  * @param {number} [options.gracePeriod=60] - Grace period in seconds before alerting
  * @returns {Promise<void>}
  */
-async function syncMonitor(monitorKey, schedule, options = {}) {
+async function sync(monitorKey, schedule, options = {}) {
   try {
     const apiKey = process.env.CRONRADAR_API_KEY || '';
     if (!apiKey) {
@@ -258,6 +258,6 @@ function generateReadableName(monitorKey) {
 }
 
 module.exports = {
-  ping,
-  syncMonitor
+  monitor,
+  sync
 };
