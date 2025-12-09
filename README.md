@@ -46,14 +46,13 @@ try {
 ## Configuration
 
 Set environment variable:
-- `CRONRADAR_API_KEY`: Your API key from cronradar.com
+- `CRONRADAR_API_KEY`: Your CronRadar API key
 
-## Documentation
+## Links
 
-See [cronradar.com/docs](https://cronradar.com/docs) for full documentation.
+- [Documentation](https://docs.cronradar.com)
+- [npm](https://www.npmjs.com/package/cronradar)
 
 ## License
 
-Proprietary - © 2025 CronRadar. All rights reserved.
-
-See [LICENSE](./LICENSE) for details. This SDK may only be used with the CronRadar monitoring service.
+© 2025 [CronRadar](https://cronradar.com) - See [LICENSE](./LICENSE)
