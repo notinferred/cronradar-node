@@ -195,13 +195,11 @@ async function syncMonitor(monitorKey, schedule, options = {}) {
  */
 async function sendPingInternal(monitorKey, apiKey) {
   try {
-    const url = new URL(`/ping/${encodeURIComponent(monitorKey)}`, 'https://cron.life');
+    // URL-based auth: /ping/{monitorKey}/{apiKey}
+    const url = new URL(`/ping/${encodeURIComponent(monitorKey)}/${encodeURIComponent(apiKey)}`, 'https://cron.life');
 
     const response = await makeRequest(url, {
       method: 'GET',
-      headers: {
-        'Authorization': 'Basic ' + Buffer.from(`${apiKey}:`).toString('base64')
-      },
       timeout: 5000
     });
 
@@ -217,7 +215,8 @@ async function sendPingInternal(monitorKey, apiKey) {
  */
 async function sendLifecyclePing(monitorKey, endpoint, apiKey, options = {}) {
   try {
-    const url = new URL(`/ping/${encodeURIComponent(monitorKey)}/${endpoint}`, 'https://cron.life');
+    // URL-based auth: /ping/{monitorKey}/{apiKey}/{endpoint}
+    const url = new URL(`/ping/${encodeURIComponent(monitorKey)}/${encodeURIComponent(apiKey)}/${endpoint}`, 'https://cron.life');
 
     // Add query parameters
     const params = new URLSearchParams();
@@ -234,9 +233,6 @@ async function sendLifecyclePing(monitorKey, endpoint, apiKey, options = {}) {
 
     await makeRequest(url, {
       method: 'POST',
-      headers: {
-        'Authorization': 'Basic ' + Buffer.from(`${apiKey}:`).toString('base64')
-      },
       timeout: 5000
     });
   } catch (error) {
