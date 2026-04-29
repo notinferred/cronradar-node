@@ -42,6 +42,46 @@ export interface SyncOptions {
 export function monitor(monitorKey: string, options?: MonitorOptions): Promise<void>;
 
 /**
+ * Signal that a job has started executing.
+ * Used for lifecycle tracking to detect hung jobs and measure execution duration.
+ *
+ * @param monitorKey - The monitor key identifying your job
+ * @param options - Optional configuration (schedule for auto-registration)
+ */
+export function startJob(monitorKey: string, options?: MonitorOptions): Promise<void>;
+
+/**
+ * Signal that a job has completed successfully.
+ * Used for lifecycle tracking to record completion time and calculate duration.
+ *
+ * @param monitorKey - The monitor key identifying your job
+ */
+export function completeJob(monitorKey: string): Promise<void>;
+
+/**
+ * Signal that a job has failed. Triggers immediate alerts without waiting for grace period.
+ *
+ * @param monitorKey - The monitor key identifying your job
+ * @param message - Optional failure message for debugging
+ */
+export function failJob(monitorKey: string, message?: string | null): Promise<void>;
+
+/**
+ * Wrap an async function with automatic lifecycle monitoring.
+ * Handles start/complete/fail signals automatically.
+ *
+ * @param monitorKey - The monitor key identifying your job
+ * @param func - The async function to wrap
+ * @param options - Optional configuration (schedule for auto-registration)
+ * @returns Wrapped function with the same call signature
+ */
+export function wrap<TArgs extends unknown[], TReturn>(
+  monitorKey: string,
+  func: (...args: TArgs) => Promise<TReturn> | TReturn,
+  options?: MonitorOptions
+): (...args: TArgs) => Promise<TReturn>;
+
+/**
  * Pre-register a monitor with CronRadar, setting up expectations for when it should run.
  * Used internally by extensions to sync discovered jobs. Advanced usage only.
  *
@@ -50,7 +90,7 @@ export function monitor(monitorKey: string, options?: MonitorOptions): Promise<v
  * @param options - Optional configuration
  * @returns Promise that resolves when sync is complete
  */
-export function sync(
+export function syncMonitor(
   monitorKey: string,
   schedule: string,
   options?: SyncOptions

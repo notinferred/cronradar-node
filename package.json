@@ -1,9 +1,12 @@
 {
   "name": "cronradar",
-  "version": "0.0.5",
+  "version": "0.0.6",
   "description": "Dead-simple cron job monitoring with auto-registration. One primary function: monitor(). Advanced: sync(). Self-healing monitors.",
   "main": "src/index.js",
   "types": "src/index.d.ts",
+  "scripts": {
+    "test": "jest"
+  },
   "keywords": [
     "cron",
     "monitoring",
@@ -34,5 +37,10 @@
     "src/index.js",
     "src/index.d.ts",
     "README.md"
-  ]
+  ],
+  "devDependencies": {
+    "jest": "^29.7.0",
+    "nock": "^13.5.0",
+    "typescript": "^5.9.3"
+  }
 }

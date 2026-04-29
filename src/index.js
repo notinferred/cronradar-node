@@ -8,6 +8,13 @@
 const https = require('https');
 const http = require('http');
 const { URL } = require('url');
+const {
+  BASE_URL,
+  DEFAULT_TIMEOUT_MS,
+  DEFAULT_GRACE_PERIOD_SECONDS,
+  API_KEY_ENV_VAR,
+  isValidMonitorKey,
+} = require('./constants');
 
 /**
  * Monitor a job execution by recording it in CronRadar.
@@ -21,7 +28,9 @@ const { URL } = require('url');
  */
 async function monitor(monitorKey, options = {}) {
   try {
-    const apiKey = process.env.CRONRADAR_API_KEY || '';
+    if (!isValidMonitorKey(monitorKey)) return;
+
+    const apiKey = process.env[API_KEY_ENV_VAR] || '';
     if (!apiKey) {
       console.error(`[CronRadar] Warning: CRONRADAR_API_KEY environment variable not set. Monitor '${monitorKey}' will not be tracked.`);
       return;
@@ -57,7 +66,9 @@ async function monitor(monitorKey, options = {}) {
  */
 async function startJob(monitorKey, options = {}) {
   try {
-    const apiKey = process.env.CRONRADAR_API_KEY || '';
+    if (!isValidMonitorKey(monitorKey)) return;
+
+    const apiKey = process.env[API_KEY_ENV_VAR] || '';
     if (!apiKey) return;
 
     await sendLifecyclePing(monitorKey, 'start', apiKey, options);
@@ -75,7 +86,9 @@ async function startJob(monitorKey, options = {}) {
  */
 async function completeJob(monitorKey) {
   try {
-    const apiKey = process.env.CRONRADAR_API_KEY || '';
+    if (!isValidMonitorKey(monitorKey)) return;
+
+    const apiKey = process.env[API_KEY_ENV_VAR] || '';
     if (!apiKey) return;
 
     await sendLifecyclePing(monitorKey, 'complete', apiKey);
@@ -94,7 +107,9 @@ async function completeJob(monitorKey) {
  */
 async function failJob(monitorKey, message = null) {
   try {
-    const apiKey = process.env.CRONRADAR_API_KEY || '';
+    if (!isValidMonitorKey(monitorKey)) return;
+
+    const apiKey = process.env[API_KEY_ENV_VAR] || '';
     if (!apiKey) return;
 
     await sendLifecyclePing(monitorKey, 'fail', apiKey, { message });
@@ -147,7 +162,9 @@ function wrap(monitorKey, func, options = {}) {
  */
 async function syncMonitor(monitorKey, schedule, options = {}) {
   try {
-    const apiKey = process.env.CRONRADAR_API_KEY || '';
+    if (!isValidMonitorKey(monitorKey)) return;
+
+    const apiKey = process.env[API_KEY_ENV_VAR] || '';
     if (!apiKey) {
       console.error(`[CronRadar] Warning: CRONRADAR_API_KEY environment variable not set. Monitor '${monitorKey}' will not be synced.`);
       return;
@@ -162,11 +179,11 @@ async function syncMonitor(monitorKey, schedule, options = {}) {
         key: monitorKey,
         name,
         schedule,
-        gracePeriod: 60
+        gracePeriod: DEFAULT_GRACE_PERIOD_SECONDS
       }]
     };
 
-    const url = new URL('/api/sync', 'https://cron.life');
+    const url = new URL('/api/sync', BASE_URL);
 
     const response = await makeRequest(url, {
       method: 'POST',
@@ -175,7 +192,7 @@ async function syncMonitor(monitorKey, schedule, options = {}) {
         'Authorization': 'Basic ' + Buffer.from(`${apiKey}:`).toString('base64')
       },
       body: JSON.stringify(syncRequest),
-      timeout: 5000
+      timeout: DEFAULT_TIMEOUT_MS
     });
 
     if (response.statusCode >= 200 && response.statusCode < 300) {
@@ -196,11 +213,11 @@ async function syncMonitor(monitorKey, schedule, options = {}) {
 async function sendPingInternal(monitorKey, apiKey) {
   try {
     // URL-based auth: /ping/{monitorKey}/{apiKey}
-    const url = new URL(`/ping/${encodeURIComponent(monitorKey)}/${encodeURIComponent(apiKey)}`, 'https://cron.life');
+    const url = new URL(`/ping/${encodeURIComponent(monitorKey)}/${encodeURIComponent(apiKey)}`, BASE_URL);
 
     const response = await makeRequest(url, {
       method: 'GET',
-      timeout: 5000
+      timeout: DEFAULT_TIMEOUT_MS
     });
 
     return response.statusCode;
@@ -216,7 +233,7 @@ async function sendPingInternal(monitorKey, apiKey) {
 async function sendLifecyclePing(monitorKey, endpoint, apiKey, options = {}) {
   try {
     // URL-based auth: /ping/{monitorKey}/{apiKey}/{endpoint}
-    const url = new URL(`/ping/${encodeURIComponent(monitorKey)}/${encodeURIComponent(apiKey)}/${endpoint}`, 'https://cron.life');
+    const url = new URL(`/ping/${encodeURIComponent(monitorKey)}/${encodeURIComponent(apiKey)}/${endpoint}`, BASE_URL);
 
     // Add query parameters
     const params = new URLSearchParams();
@@ -233,7 +250,7 @@ async function sendLifecyclePing(monitorKey, endpoint, apiKey, options = {}) {
 
     await makeRequest(url, {
       method: 'POST',
-      timeout: 5000
+      timeout: DEFAULT_TIMEOUT_MS
     });
   } catch (error) {
     // Silently fail to protect job execution
@@ -255,7 +272,7 @@ function makeRequest(url, options = {}) {
       path: url.pathname + url.search,
       method: options.method || 'GET',
       headers: options.headers || {},
-      timeout: options.timeout || 5000
+      timeout: options.timeout || DEFAULT_TIMEOUT_MS
     };
 
     const req = client.request(requestOptions, (res) => {
