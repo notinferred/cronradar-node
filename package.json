@@ -36,6 +36,7 @@
   "files": [
     "src/index.js",
     "src/index.d.ts",
+    "src/constants.js",
     "README.md"
   ],
   "devDependencies": {
