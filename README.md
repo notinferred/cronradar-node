@@ -88,16 +88,17 @@ Records a successful execution. Returns `Promise<void>`.
 
 ```javascript
 await cronradar.monitor(key);
-await cronradar.monitor(key, { schedule, gracePeriod });
+await cronradar.monitor(key, { schedule });
 ```
 
 | Parameter | Type | Required | Notes |
 |---|---|---|---|
-| `key` | `string` | yes | Monitor key. Lowercase, kebab/snake/dot-case. Max 64 chars. |
+| `key` | `string` | yes | Monitor key. Lowercase, kebab/snake/dot-case. Max 200 chars. |
 | `options.schedule` | `string` | optional | Standard 5-field cron expression. Required on the *first* ping for self-healing registration. |
-| `options.gracePeriod` | `number` | optional | Seconds. How late the next ping can be before an alert fires. Default: 60. |
 
 Throws: never. Network errors and 4xx/5xx responses are caught and logged to `stderr`.
+
+Grace period is configured per-monitor on CronRadar (default 60 seconds, set via the dashboard or the `gracePeriod` field passed to `syncMonitor`). It's not a per-ping argument.
 
 ### `startJob(key)`
 
@@ -148,7 +149,6 @@ await wrapped();
 | `key` | `string` | yes | Monitor key. |
 | `fn` | `() => Promise<T>` | yes | The async function to instrument. |
 | `options.schedule` | `string` | optional | Cron expression for self-healing registration. |
-| `options.gracePeriod` | `number` | optional | Seconds. Default: 60. |
 
 The wrapped function returns whatever `fn` returns. If `fn` throws, the wrapper re-throws after recording the failure. Monitoring never swallows your exceptions.
 
@@ -178,9 +178,9 @@ Used internally by extensions; rarely needed in application code.
 | Environment variable | Required | Default | Purpose |
 |---|---|---|---|
 | `CRONRADAR_API_KEY` | yes | — | API key from the CronRadar dashboard. Format `ck_app_xxxxx`. |
-| `CRONRADAR_BASE_URL` | no | `https://cron.life` | Override the ingestion endpoint. Used for self-hosted or staging environments. |
-| `CRONRADAR_TIMEOUT_MS` | no | `5000` | HTTP request timeout in milliseconds. |
-| `CRONRADAR_LOG_ERRORS` | no | `true` | Set to `false` to suppress the stderr warnings the SDK emits on network failure. |
+| `CRONRADAR_DEBUG` | no | `false` | Set to `true` to log every request and error to stderr. |
+
+The base URL (`https://cron.life`), HTTP timeout (5 seconds), and default grace period (60 seconds) are compile-time constants in `src/constants.js`. To customize them, fork the SDK or open an issue for a configurable hook.
 
 ## Error handling
 
@@ -200,7 +200,7 @@ What this looks like at runtime:
 | Wrapped function rejects | Records `failJob`; re-throws | Receives the original rejection |
 | `CRONRADAR_API_KEY` missing | Logs once per process; subsequent calls no-op | Continues normally |
 
-If you need to know whether a ping succeeded — for example, in tests — the return value is `Promise<void>` either way; success is silent. Inspect `stderr` or set `CRONRADAR_LOG_ERRORS=true` (default) to see failures.
+If you need to know whether a ping succeeded — for example, in tests — the return value is `Promise<void>` either way; success is silent. Set `CRONRADAR_DEBUG=true` to log every request and error to stderr.
 
 ## Troubleshooting
 
@@ -246,15 +246,15 @@ await cronradar.monitor('daily-backup');
 process.exit(0);  // safe — await above ensures the ping completed
 ```
 
-### Errors are noisy in development
+### Errors are silent in development
 
-Set `CRONRADAR_LOG_ERRORS=false` in dev environments where you don't have a real API key set:
+By default the SDK only writes to stderr when `CRONRADAR_DEBUG=true`. If you want to see what's happening during development:
 
 ```bash
-CRONRADAR_LOG_ERRORS=false npm run dev
+CRONRADAR_DEBUG=true npm run dev
 ```
 
-The SDK still no-ops cleanly; it just stops complaining.
+If `CRONRADAR_API_KEY` is unset entirely, the SDK no-ops every call without logging.
 
 ## Links
 
