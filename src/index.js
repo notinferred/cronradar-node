@@ -16,6 +16,8 @@ const {
   isValidMonitorKey,
 } = require('./constants');
 
+const SDK_VERSION = require('../package.json').version;
+
 /**
  * Monitor a job execution by recording it in CronRadar.
  * Optionally provide schedule for self-healing (auto-registration on 404).
@@ -207,6 +209,66 @@ async function syncMonitor(monitorKey, schedule, options = {}) {
 }
 
 /**
+ * Reconcile the complete set of monitors for a source in a single request.
+ * Extensions call this on startup and periodically to declare every discovered job
+ * (the authoritative set), so dead-man coverage exists before a job ever runs.
+ *
+ * @param {Array<{key: string, schedule: string, name?: string, gracePeriod?: number}>} monitors
+ * @param {Object} [options]
+ * @param {string} [options.source] - Source framework. Auto-detected if omitted.
+ * @param {string} [options.version] - Extension version reported to the server.
+ * @returns {Promise<void>}
+ */
+async function syncMonitors(monitors, options = {}) {
+  try {
+    const payloadMonitors = (monitors || [])
+      .filter(m => m && m.key && m.schedule && isValidMonitorKey(m.key))
+      .map(m => ({
+        key: m.key,
+        name: m.name || generateReadableName(m.key),
+        schedule: m.schedule,
+        gracePeriod: m.gracePeriod != null ? m.gracePeriod : DEFAULT_GRACE_PERIOD_SECONDS
+      }));
+
+    const apiKey = process.env[API_KEY_ENV_VAR] || '';
+    if (!apiKey) {
+      console.error(`[CronRadar] Warning: CRONRADAR_API_KEY environment variable not set. ${payloadMonitors.length} monitor(s) will not be synced.`);
+      return;
+    }
+
+    const source = options.source || detectSource();
+
+    const syncRequest = {
+      source,
+      version: options.version || SDK_VERSION,
+      mode: 'reconcile',
+      monitors: payloadMonitors
+    };
+
+    const url = new URL('/api/sync', BASE_URL);
+
+    const response = await makeRequest(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Basic ' + Buffer.from(`${apiKey}:`).toString('base64')
+      },
+      body: JSON.stringify(syncRequest),
+      timeout: DEFAULT_TIMEOUT_MS
+    });
+
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      console.error(`[CronRadar] Reconciled ${payloadMonitors.length} monitor(s) for source '${source}'.`);
+    } else {
+      console.error(`[CronRadar] Failed to reconcile monitors for source '${source}': HTTP ${response.statusCode}`);
+    }
+  } catch (error) {
+    console.error(`[CronRadar] Error reconciling monitors: ${error.message}`);
+    // Never throw - protect user's application
+  }
+}
+
+/**
  * Send ping internally and return status code
  * @private
  */
@@ -389,5 +451,6 @@ module.exports = {
   completeJob,
   failJob,
   wrap,
-  syncMonitor
+  syncMonitor,
+  syncMonitors
 };
