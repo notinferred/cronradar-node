@@ -2,13 +2,18 @@
  * CronRadar Node.js SDK Tests
  */
 
+const assert = require('node:assert/strict');
+const { afterEach, beforeEach, describe, it } = require('node:test');
 const nock = require('nock');
 const cronradar = require('../src/index');
 
 describe('CronRadar Node.js SDK', () => {
   const originalEnv = process.env.CRONRADAR_API_KEY;
+  let originalConsoleError;
 
   beforeEach(() => {
+    originalConsoleError = console.error;
+    console.error = () => {};
     // Set up test API key
     process.env.CRONRADAR_API_KEY = 'test-api-key-123';
     // Clean up any pending nock mocks
@@ -16,6 +21,7 @@ describe('CronRadar Node.js SDK', () => {
   });
 
   afterEach(() => {
+    console.error = originalConsoleError;
     // Restore original environment
     process.env.CRONRADAR_API_KEY = originalEnv;
     nock.cleanAll();
@@ -29,13 +35,13 @@ describe('CronRadar Node.js SDK', () => {
 
       await cronradar.monitor('test-job');
 
-      expect(scope.isDone()).toBe(true);
+      assert.equal(scope.isDone(), true);
     });
 
     it('should not throw when API key is missing', async () => {
       delete process.env.CRONRADAR_API_KEY;
 
-      await expect(cronradar.monitor('test-job')).resolves.toBeUndefined();
+      assert.equal(await cronradar.monitor('test-job'), undefined);
     });
 
     it('should URL encode special characters in monitor key', async () => {
@@ -45,7 +51,7 @@ describe('CronRadar Node.js SDK', () => {
 
       await cronradar.monitor('test job/special');
 
-      expect(scope.isDone()).toBe(true);
+      assert.equal(scope.isDone(), true);
     });
 
     it('should trigger sync on 404 when schedule provided', async () => {
@@ -63,9 +69,9 @@ describe('CronRadar Node.js SDK', () => {
 
       await cronradar.monitor('test-job', { schedule: '* * * * *' });
 
-      expect(pingScope.isDone()).toBe(true);
-      expect(syncScope.isDone()).toBe(true);
-      expect(retryScope.isDone()).toBe(true);
+      assert.equal(pingScope.isDone(), true);
+      assert.equal(syncScope.isDone(), true);
+      assert.equal(retryScope.isDone(), true);
     });
 
     it('should not trigger sync on 404 without schedule', async () => {
@@ -75,7 +81,7 @@ describe('CronRadar Node.js SDK', () => {
 
       await cronradar.monitor('test-job');
 
-      expect(pingScope.isDone()).toBe(true);
+      assert.equal(pingScope.isDone(), true);
     });
 
     it('should handle network errors gracefully', async () => {
@@ -83,7 +89,7 @@ describe('CronRadar Node.js SDK', () => {
         .get('/ping/test-job/test-api-key-123')
         .replyWithError('Connection refused');
 
-      await expect(cronradar.monitor('test-job')).resolves.toBeUndefined();
+      assert.equal(await cronradar.monitor('test-job'), undefined);
     });
   });
 
@@ -95,7 +101,7 @@ describe('CronRadar Node.js SDK', () => {
 
       await cronradar.startJob('test-job');
 
-      expect(scope.isDone()).toBe(true);
+      assert.equal(scope.isDone(), true);
     });
 
     it('should include schedule query param when provided', async () => {
@@ -106,13 +112,13 @@ describe('CronRadar Node.js SDK', () => {
 
       await cronradar.startJob('test-job', { schedule: '*/5 * * * *' });
 
-      expect(scope.isDone()).toBe(true);
+      assert.equal(scope.isDone(), true);
     });
 
     it('should not throw when API key is missing', async () => {
       delete process.env.CRONRADAR_API_KEY;
 
-      await expect(cronradar.startJob('test-job')).resolves.toBeUndefined();
+      assert.equal(await cronradar.startJob('test-job'), undefined);
     });
   });
 
@@ -124,13 +130,13 @@ describe('CronRadar Node.js SDK', () => {
 
       await cronradar.completeJob('test-job');
 
-      expect(scope.isDone()).toBe(true);
+      assert.equal(scope.isDone(), true);
     });
 
     it('should not throw when API key is missing', async () => {
       delete process.env.CRONRADAR_API_KEY;
 
-      await expect(cronradar.completeJob('test-job')).resolves.toBeUndefined();
+      assert.equal(await cronradar.completeJob('test-job'), undefined);
     });
   });
 
@@ -142,7 +148,7 @@ describe('CronRadar Node.js SDK', () => {
 
       await cronradar.failJob('test-job');
 
-      expect(scope.isDone()).toBe(true);
+      assert.equal(scope.isDone(), true);
     });
 
     it('should include message query param when provided', async () => {
@@ -153,13 +159,13 @@ describe('CronRadar Node.js SDK', () => {
 
       await cronradar.failJob('test-job', 'Job failed due to timeout');
 
-      expect(scope.isDone()).toBe(true);
+      assert.equal(scope.isDone(), true);
     });
 
     it('should not throw when API key is missing', async () => {
       delete process.env.CRONRADAR_API_KEY;
 
-      await expect(cronradar.failJob('test-job', 'error')).resolves.toBeUndefined();
+      assert.equal(await cronradar.failJob('test-job', 'error'), undefined);
     });
   });
 
@@ -179,9 +185,9 @@ describe('CronRadar Node.js SDK', () => {
 
       const result = await wrappedFn();
 
-      expect(result).toBe('result');
-      expect(startScope.isDone()).toBe(true);
-      expect(completeScope.isDone()).toBe(true);
+      assert.equal(result, 'result');
+      assert.equal(startScope.isDone(), true);
+      assert.equal(completeScope.isDone(), true);
     });
 
     it('should call startJob and failJob on error', async () => {
@@ -198,9 +204,9 @@ describe('CronRadar Node.js SDK', () => {
         throw new Error('Test error');
       });
 
-      await expect(wrappedFn()).rejects.toThrow('Test error');
-      expect(startScope.isDone()).toBe(true);
-      expect(failScope.isDone()).toBe(true);
+      await assert.rejects(wrappedFn(), /Test error/);
+      assert.equal(startScope.isDone(), true);
+      assert.equal(failScope.isDone(), true);
     });
 
     it('should pass arguments to wrapped function', async () => {
@@ -212,7 +218,7 @@ describe('CronRadar Node.js SDK', () => {
 
       const result = await wrappedFn(1, 2);
 
-      expect(result).toBe(3);
+      assert.equal(result, 3);
     });
   });
 
@@ -226,7 +232,7 @@ describe('CronRadar Node.js SDK', () => {
 
       await cronradar.syncMonitor('test-job', '* * * * *');
 
-      expect(scope.isDone()).toBe(true);
+      assert.equal(scope.isDone(), true);
     });
 
     it('should include Basic auth header', async () => {
@@ -237,7 +243,7 @@ describe('CronRadar Node.js SDK', () => {
 
       await cronradar.syncMonitor('test-job', '* * * * *');
 
-      expect(scope.isDone()).toBe(true);
+      assert.equal(scope.isDone(), true);
     });
 
     it('should send correct payload structure', async () => {
@@ -251,7 +257,7 @@ describe('CronRadar Node.js SDK', () => {
 
       await cronradar.syncMonitor('test-job', '*/5 * * * *');
 
-      expect(scope.isDone()).toBe(true);
+      assert.equal(scope.isDone(), true);
     });
 
     it('should generate readable name from kebab-case key', async () => {
@@ -263,13 +269,13 @@ describe('CronRadar Node.js SDK', () => {
 
       await cronradar.syncMonitor('check-overdue-pings', '* * * * *');
 
-      expect(scope.isDone()).toBe(true);
+      assert.equal(scope.isDone(), true);
     });
 
     it('should not throw when API key is missing', async () => {
       delete process.env.CRONRADAR_API_KEY;
 
-      await expect(cronradar.syncMonitor('test-job', '* * * * *')).resolves.toBeUndefined();
+      assert.equal(await cronradar.syncMonitor('test-job', '* * * * *'), undefined);
     });
   });
 });

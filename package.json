@@ -5,7 +5,7 @@
   "main": "src/index.js",
   "types": "src/index.d.ts",
   "scripts": {
-    "test": "jest"
+    "test": "node --test"
   },
   "keywords": [
     "cron",
@@ -40,7 +40,6 @@
     "README.md"
   ],
   "devDependencies": {
-    "jest": "^29.7.0",
     "nock": "^13.5.0",
     "typescript": "^5.9.3"
   }
