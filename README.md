@@ -2,7 +2,7 @@
 
 The base SDK for monitoring scheduled jobs in Node.js. Wrap a function, send a heartbeat, or track full lifecycle — CronRadar tracks duration, alerts on missed schedules, and recovers from accidental monitor deletion.
 
-For framework integrations (Bull, BullMQ, node-cron auto-discovery), framework-specific extensions are in flight on top of this base.
+Bull/BullMQ auto-discovery is in progress. For `node-cron` and other Node.js schedulers, use this base SDK's explicit wrapper; no node-cron auto-discovery package is currently supported.
 
 ## Install
 
@@ -23,6 +23,8 @@ export CRONRADAR_API_KEY=ck_app_xxxxxxxxxxxxxxxxxxxx
 ```
 
 Get the API key from the CronRadar dashboard at [app.cronradar.com](https://app.cronradar.com) under your application's settings. API keys have the form `ck_app_<random>`.
+
+Create a separate CronRadar application and API key for production, staging, and development. Store the key in the deployment platform's secret manager; never commit it, print it, or reuse a production key outside production.
 
 The SDK does not require explicit initialization. The first call to any monitoring function reads the env var; if it's missing, the SDK logs a single warning to `stderr` and silently no-ops every subsequent call (per the "never break a user's job" guarantee).
 
@@ -209,7 +211,7 @@ If you need to know whether a ping succeeded — for example, in tests — the r
 Your `CRONRADAR_API_KEY` is wrong or missing. Verify:
 
 ```bash
-echo $CRONRADAR_API_KEY    # should print ck_app_xxxxx
+test -n "$CRONRADAR_API_KEY" && echo "CronRadar key is set" || echo "CronRadar key is missing"
 ```
 
 The key must match the one shown on **app.cronradar.com → your application → Settings → API Keys**. Keys are not retrievable after creation — if you lost it, create a new one and rotate.
@@ -256,11 +258,27 @@ CRONRADAR_DEBUG=true npm run dev
 
 If `CRONRADAR_API_KEY` is unset entirely, the SDK no-ops every call without logging.
 
+## Verification
+
+Run the wrapped job once and confirm the intended CronRadar application shows the monitor plus a terminal `success` or `failed` result. Await SDK calls before a short-lived process exits.
+
+Check authentication and outbound HTTPS without printing the key:
+
+```bash
+curl --fail-with-body --silent --show-error --user "$CRONRADAR_API_KEY:" "https://cron.life/api/sync/status"
+```
+
+After a real run is visible, use the guided reliability drill to verify notification delivery without changing the production job.
+
+## Migration
+
+To replace a completion-only `monitor()` call, keep the same key and schedule, execute the job through `wrap()`, verify one successful and one controlled failed run, then remove the old heartbeat. `wrap()` records the failure and rethrows the original user exception, so scheduler behavior remains unchanged.
+
 ## Links
 
 - **Documentation:** [docs.cronradar.com](https://docs.cronradar.com)
 - **Agent-friendly index:** [docs.cronradar.com/llms.txt](https://docs.cronradar.com/llms.txt)
-- **OpenAPI spec:** [api.cronradar.com/swagger/v1/swagger.json](https://api.cronradar.com/swagger/v1/swagger.json)
+- **OpenAPI spec:** [docs.cronradar.com/openapi.json](https://docs.cronradar.com/openapi.json)
 - **npm:** [npmjs.com/package/cronradar](https://www.npmjs.com/package/cronradar)
 - **GitHub:** [github.com/cronradar/cronradar-node](https://github.com/cronradar/cronradar-node)
 - **Support:** support@cronradar.com
