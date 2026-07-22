@@ -30,7 +30,7 @@ describe('CronRadar Node.js SDK', () => {
   describe('monitor()', () => {
     it('should send GET request to correct URL', async () => {
       const scope = nock('https://cron.life')
-        .get('/ping/test-job/test-api-key-123')
+        .get('/api/v1/ping/test-job/test-api-key-123')
         .reply(200, 'OK');
 
       await cronradar.monitor('test-job');
@@ -46,7 +46,7 @@ describe('CronRadar Node.js SDK', () => {
 
     it('should URL encode special characters in monitor key', async () => {
       const scope = nock('https://cron.life')
-        .get('/ping/test%20job%2Fspecial/test-api-key-123')
+        .get('/api/v1/ping/test%20job%2Fspecial/test-api-key-123')
         .reply(200, 'OK');
 
       await cronradar.monitor('test job/special');
@@ -56,15 +56,15 @@ describe('CronRadar Node.js SDK', () => {
 
     it('should trigger sync on 404 when schedule provided', async () => {
       const pingScope = nock('https://cron.life')
-        .get('/ping/test-job/test-api-key-123')
+        .get('/api/v1/ping/test-job/test-api-key-123')
         .reply(404);
 
       const syncScope = nock('https://cron.life')
-        .post('/api/sync')
+        .post('/api/v1/sync')
         .reply(200, 'OK');
 
       const retryScope = nock('https://cron.life')
-        .get('/ping/test-job/test-api-key-123')
+        .get('/api/v1/ping/test-job/test-api-key-123')
         .reply(200, 'OK');
 
       await cronradar.monitor('test-job', { schedule: '* * * * *' });
@@ -76,7 +76,7 @@ describe('CronRadar Node.js SDK', () => {
 
     it('should not trigger sync on 404 without schedule', async () => {
       const pingScope = nock('https://cron.life')
-        .get('/ping/test-job/test-api-key-123')
+        .get('/api/v1/ping/test-job/test-api-key-123')
         .reply(404);
 
       await cronradar.monitor('test-job');
@@ -86,7 +86,7 @@ describe('CronRadar Node.js SDK', () => {
 
     it('should handle network errors gracefully', async () => {
       nock('https://cron.life')
-        .get('/ping/test-job/test-api-key-123')
+        .get('/api/v1/ping/test-job/test-api-key-123')
         .replyWithError('Connection refused');
 
       assert.equal(await cronradar.monitor('test-job'), undefined);
@@ -96,7 +96,7 @@ describe('CronRadar Node.js SDK', () => {
   describe('startJob()', () => {
     it('should send POST request to start endpoint', async () => {
       const scope = nock('https://cron.life')
-        .post('/ping/test-job/test-api-key-123/start')
+        .post('/api/v1/ping/test-job/test-api-key-123/start')
         .reply(200, 'OK');
 
       await cronradar.startJob('test-job');
@@ -106,7 +106,7 @@ describe('CronRadar Node.js SDK', () => {
 
     it('should include schedule query param when provided', async () => {
       const scope = nock('https://cron.life')
-        .post('/ping/test-job/test-api-key-123/start')
+        .post('/api/v1/ping/test-job/test-api-key-123/start')
         .query({ schedule: '*/5 * * * *' })
         .reply(200, 'OK');
 
@@ -125,7 +125,7 @@ describe('CronRadar Node.js SDK', () => {
   describe('completeJob()', () => {
     it('should send POST request to complete endpoint', async () => {
       const scope = nock('https://cron.life')
-        .post('/ping/test-job/test-api-key-123/complete')
+        .post('/api/v1/ping/test-job/test-api-key-123/complete')
         .reply(200, 'OK');
 
       await cronradar.completeJob('test-job');
@@ -143,7 +143,7 @@ describe('CronRadar Node.js SDK', () => {
   describe('failJob()', () => {
     it('should send POST request to fail endpoint', async () => {
       const scope = nock('https://cron.life')
-        .post('/ping/test-job/test-api-key-123/fail')
+        .post('/api/v1/ping/test-job/test-api-key-123/fail')
         .reply(200, 'OK');
 
       await cronradar.failJob('test-job');
@@ -153,7 +153,7 @@ describe('CronRadar Node.js SDK', () => {
 
     it('should include message query param when provided', async () => {
       const scope = nock('https://cron.life')
-        .post('/ping/test-job/test-api-key-123/fail')
+        .post('/api/v1/ping/test-job/test-api-key-123/fail')
         .query({ message: 'Job failed due to timeout' })
         .reply(200, 'OK');
 
@@ -172,11 +172,11 @@ describe('CronRadar Node.js SDK', () => {
   describe('wrap()', () => {
     it('should call startJob and completeJob on success', async () => {
       const startScope = nock('https://cron.life')
-        .post('/ping/test-job/test-api-key-123/start')
+        .post('/api/v1/ping/test-job/test-api-key-123/start')
         .reply(200, 'OK');
 
       const completeScope = nock('https://cron.life')
-        .post('/ping/test-job/test-api-key-123/complete')
+        .post('/api/v1/ping/test-job/test-api-key-123/complete')
         .reply(200, 'OK');
 
       const wrappedFn = cronradar.wrap('test-job', async () => {
@@ -192,11 +192,11 @@ describe('CronRadar Node.js SDK', () => {
 
     it('should call startJob and failJob on error', async () => {
       const startScope = nock('https://cron.life')
-        .post('/ping/test-job/test-api-key-123/start')
+        .post('/api/v1/ping/test-job/test-api-key-123/start')
         .reply(200, 'OK');
 
       const failScope = nock('https://cron.life')
-        .post('/ping/test-job/test-api-key-123/fail')
+        .post('/api/v1/ping/test-job/test-api-key-123/fail')
         .query({ message: 'Test error' })
         .reply(200, 'OK');
 
@@ -223,9 +223,9 @@ describe('CronRadar Node.js SDK', () => {
   });
 
   describe('syncMonitor()', () => {
-    it('should send POST request to /api/sync', async () => {
+    it('should send POST request to /api/v1/sync', async () => {
       const scope = nock('https://cron.life')
-        .post('/api/sync', (body) => {
+        .post('/api/v1/sync', (body) => {
           return body.source && body.monitors && body.monitors.length === 1;
         })
         .reply(200, 'OK');
@@ -237,7 +237,7 @@ describe('CronRadar Node.js SDK', () => {
 
     it('should include Basic auth header', async () => {
       const scope = nock('https://cron.life')
-        .post('/api/sync')
+        .post('/api/v1/sync')
         .matchHeader('Authorization', (val) => val.startsWith('Basic '))
         .reply(200, 'OK');
 
@@ -248,7 +248,7 @@ describe('CronRadar Node.js SDK', () => {
 
     it('should send correct payload structure', async () => {
       const scope = nock('https://cron.life')
-        .post('/api/sync', (body) => {
+        .post('/api/v1/sync', (body) => {
           return body.monitors[0].key === 'test-job' &&
                  body.monitors[0].schedule === '*/5 * * * *' &&
                  body.monitors[0].gracePeriod === 60;
@@ -262,7 +262,7 @@ describe('CronRadar Node.js SDK', () => {
 
     it('should generate readable name from kebab-case key', async () => {
       const scope = nock('https://cron.life')
-        .post('/api/sync', (body) => {
+        .post('/api/v1/sync', (body) => {
           return body.monitors[0].name === 'Check Overdue Pings';
         })
         .reply(200, 'OK');

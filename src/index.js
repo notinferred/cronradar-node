@@ -185,7 +185,7 @@ async function syncMonitor(monitorKey, schedule, options = {}) {
       }]
     };
 
-    const url = new URL('/api/sync', BASE_URL);
+    const url = new URL('/api/v1/sync', BASE_URL);
 
     const response = await makeRequest(url, {
       method: 'POST',
@@ -245,7 +245,7 @@ async function syncMonitors(monitors, options = {}) {
       monitors: payloadMonitors
     };
 
-    const url = new URL('/api/sync', BASE_URL);
+    const url = new URL('/api/v1/sync', BASE_URL);
 
     const response = await makeRequest(url, {
       method: 'POST',
@@ -274,8 +274,8 @@ async function syncMonitors(monitors, options = {}) {
  */
 async function sendPingInternal(monitorKey, apiKey) {
   try {
-    // URL-based auth: /ping/{monitorKey}/{apiKey}
-    const url = new URL(`/ping/${encodeURIComponent(monitorKey)}/${encodeURIComponent(apiKey)}`, BASE_URL);
+    // URL-based auth: /api/v1/ping/{monitorKey}/{apiKey}
+    const url = new URL(`/api/v1/ping/${encodeURIComponent(monitorKey)}/${encodeURIComponent(apiKey)}`, BASE_URL);
 
     const response = await makeRequest(url, {
       method: 'GET',
@@ -294,8 +294,8 @@ async function sendPingInternal(monitorKey, apiKey) {
  */
 async function sendLifecyclePing(monitorKey, endpoint, apiKey, options = {}) {
   try {
-    // URL-based auth: /ping/{monitorKey}/{apiKey}/{endpoint}
-    const url = new URL(`/ping/${encodeURIComponent(monitorKey)}/${encodeURIComponent(apiKey)}/${endpoint}`, BASE_URL);
+    // URL-based auth: /api/v1/ping/{monitorKey}/{apiKey}/{endpoint}
+    const url = new URL(`/api/v1/ping/${encodeURIComponent(monitorKey)}/${encodeURIComponent(apiKey)}/${endpoint}`, BASE_URL);
 
     // Add query parameters
     const params = new URLSearchParams();
