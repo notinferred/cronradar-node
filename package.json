@@ -1,7 +1,7 @@
 {
   "name": "cronradar",
-  "version": "0.1.0",
-  "description": "Dead-simple cron job monitoring with auto-registration. One primary function: monitor(). Advanced: sync(). Self-healing monitors.",
+  "version": "0.1.1",
+  "description": "Non-blocking lifecycle and heartbeat monitoring for Node.js scheduled jobs, with missed-run, failure, and stuck-run detection.",
   "main": "src/index.js",
   "types": "src/index.d.ts",
   "scripts": {
@@ -12,15 +12,14 @@
     "monitoring",
     "scheduler",
     "job",
-    "task",
-    "ping",
-    "sync",
-    "auto-register",
-    "bull",
-    "agenda",
-    "node-cron"
+    "scheduled-jobs",
+    "recurring-jobs",
+    "missed-jobs",
+    "failed-jobs",
+    "stuck-jobs",
+    "heartbeat"
   ],
-  "author": "Administrator <contact@cronradar.com>",
+  "author": "CronRadar <support@cronradar.com>",
   "license": "proprietary",
   "repository": {
     "type": "git",
@@ -29,7 +28,7 @@
   "bugs": {
     "url": "https://github.com/cronradar/cronradar-node/issues"
   },
-  "homepage": "https://cronradar.com/docs",
+  "homepage": "https://cronradar.com/nodejs",
   "engines": {
     "node": ">=14.0.0"
   },

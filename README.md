@@ -276,7 +276,8 @@ To replace a completion-only `monitor()` call, keep the same key and schedule, e
 
 ## Links
 
-- **Documentation:** [docs.cronradar.com](https://docs.cronradar.com)
+- **Documentation:** [docs.cronradar.com/integrations/node](https://docs.cronradar.com/integrations/node)
+- **Monitoring overview:** [cronradar.com/nodejs](https://cronradar.com/nodejs)
 - **Agent-friendly index:** [docs.cronradar.com/llms.txt](https://docs.cronradar.com/llms.txt)
 - **OpenAPI spec:** [docs.cronradar.com/openapi.json](https://docs.cronradar.com/openapi.json)
 - **npm:** [npmjs.com/package/cronradar](https://www.npmjs.com/package/cronradar)
