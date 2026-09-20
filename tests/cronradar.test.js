@@ -18,13 +18,16 @@ describe('CronRadar Node.js SDK', () => {
     process.env.CRONRADAR_API_KEY = 'test-api-key-123';
     // Clean up any pending nock mocks
     nock.cleanAll();
+    nock.disableNetConnect();
   });
 
   afterEach(() => {
     console.error = originalConsoleError;
     // Restore original environment
-    process.env.CRONRADAR_API_KEY = originalEnv;
+    if (originalEnv === undefined) delete process.env.CRONRADAR_API_KEY;
+    else process.env.CRONRADAR_API_KEY = originalEnv;
     nock.cleanAll();
+    nock.enableNetConnect();
   });
 
   describe('monitor()', () => {
@@ -84,6 +87,16 @@ describe('CronRadar Node.js SDK', () => {
       assert.equal(pingScope.isDone(), true);
     });
 
+    it('preserves the requested grace period during self-registration', async () => {
+      const scope = nock('https://cron.life')
+        .get('/api/v1/ping/test-job/test-api-key-123').reply(404)
+        .post('/api/v1/sync', body => body.monitors[0].gracePeriod === 600).reply(200)
+        .get('/api/v1/ping/test-job/test-api-key-123').reply(200);
+
+      await cronradar.monitor('test-job', { schedule: '0 * * * *', gracePeriod: 600 });
+      assert.equal(scope.isDone(), true);
+    });
+
     it('should handle network errors gracefully', async () => {
       nock('https://cron.life')
         .get('/api/v1/ping/test-job/test-api-key-123')
@@ -119,6 +132,15 @@ describe('CronRadar Node.js SDK', () => {
       delete process.env.CRONRADAR_API_KEY;
 
       assert.equal(await cronradar.startJob('test-job'), undefined);
+    });
+
+    it('passes the requested grace period when creating a lifecycle monitor', async () => {
+      const scope = nock('https://cron.life')
+        .post('/api/v1/ping/test-job/test-api-key-123/start')
+        .query({ schedule: '0 * * * *', gracePeriod: '600' }).reply(200);
+
+      await cronradar.startJob('test-job', { schedule: '0 * * * *', gracePeriod: 600 });
+      assert.equal(scope.isDone(), true);
     });
   });
 
@@ -220,6 +242,41 @@ describe('CronRadar Node.js SDK', () => {
 
       assert.equal(result, 3);
     });
+
+    it('preserves the receiver and exact result while monitoring is unavailable', async () => {
+      nock('https://cron.life').post(/.*/).replyWithError('Unavailable').persist();
+      const expected = { completed: true };
+      const job = {
+        expected,
+        run: cronradar.wrap('test-job', function(value) {
+          assert.equal(value, 7);
+          return this.expected;
+        })
+      };
+
+      assert.equal(await job.run(7), expected);
+    });
+
+    for (const error of [null, undefined, 'job rejected', 0, new Error('original error'),
+      Object.defineProperty({}, 'message', { get() { throw new Error('getter failed'); } })]) {
+      it(`preserves a thrown ${error === null ? 'null' : typeof error} value`, async () => {
+        const scope = nock('https://cron.life').post(/.*/).replyWithError('Unavailable').persist();
+        const wrapped = cronradar.wrap('test-job', () => { throw error; });
+        let rejected = false;
+        await wrapped().then(() => assert.fail('Expected the job failure'), actual => {
+          rejected = true;
+          assert.equal(actual, error);
+        });
+        assert.equal(rejected, true);
+        assert.equal(scope.isDone(), true);
+      });
+    }
+
+    it('does not let a monitoring diagnostic failure replace a successful job result', async () => {
+      console.error = () => { throw new Error('stderr unavailable'); };
+      const wrapped = cronradar.wrap('', () => 42);
+      assert.equal(await wrapped(), 42);
+    });
   });
 
   describe('syncMonitor()', () => {
@@ -272,10 +329,43 @@ describe('CronRadar Node.js SDK', () => {
       assert.equal(scope.isDone(), true);
     });
 
+    it('uses the configured grace period for a single monitor', async () => {
+      const scope = nock('https://cron.life')
+        .post('/api/v1/sync', body => body.monitors[0].gracePeriod === 600).reply(200);
+      await cronradar.syncMonitor('test-job', '0 * * * *', { gracePeriod: 600 });
+      assert.equal(scope.isDone(), true);
+    });
+
     it('should not throw when API key is missing', async () => {
       delete process.env.CRONRADAR_API_KEY;
 
       assert.equal(await cronradar.syncMonitor('test-job', '* * * * *'), undefined);
+    });
+  });
+
+  describe('grace period validation', () => {
+    for (const gracePeriod of [59, -1, 60.5, NaN, Infinity, '600', 2147483648]) {
+      it(`skips invalid grace ${String(gracePeriod)} without sending a partial registry`, async () => {
+        const scope = nock('https://cron.life').post('/api/v1/sync').reply(200);
+        assert.equal(await cronradar.syncMonitor('test-job', '0 * * * *', { gracePeriod }), undefined);
+        assert.equal(await cronradar.syncMonitors([
+          { key: 'valid-job', schedule: '0 * * * *', gracePeriod: 600 },
+          { key: 'invalid-job', schedule: '0 * * * *', gracePeriod },
+        ]), undefined);
+        assert.equal(scope.isDone(), false);
+      });
+    }
+
+    it('preserves individual grace periods in the complete registry', async () => {
+      const scope = nock('https://cron.life')
+        .post('/api/v1/sync', body => body.mode === 'reconcile' &&
+          body.monitors[0].gracePeriod === 600 && body.monitors[1].gracePeriod === 60)
+        .reply(200);
+      await cronradar.syncMonitors([
+        { key: 'custom-job', schedule: '0 * * * *', gracePeriod: 600 },
+        { key: 'default-job', schedule: '0 * * * *' },
+      ]);
+      assert.equal(scope.isDone(), true);
     });
   });
 });
