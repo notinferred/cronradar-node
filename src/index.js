@@ -31,6 +31,7 @@ const SDK_VERSION = require('../package.json').version;
 async function monitor(monitorKey, options = {}) {
   try {
     if (!isValidMonitorKey(monitorKey)) return;
+    const gracePeriod = resolveGracePeriod(options.gracePeriod);
 
     const apiKey = process.env[API_KEY_ENV_VAR] || '';
     if (!apiKey) {
@@ -46,7 +47,7 @@ async function monitor(monitorKey, options = {}) {
       console.error(`[CronRadar] Monitor '${monitorKey}' not found. Auto-registering with schedule '${options.schedule}'...`);
 
       const source = detectSource();
-      await syncMonitor(monitorKey, options.schedule, { source });
+      await syncMonitor(monitorKey, options.schedule, { source, gracePeriod });
 
       // Retry ping
       await sendPingInternal(monitorKey, apiKey);
@@ -138,16 +139,36 @@ async function failJob(monitorKey, message = null) {
  */
 function wrap(monitorKey, func, options = {}) {
   return async function(...args) {
-    await startJob(monitorKey, options);
+    // Instrumentation must never change the wrapped function's behavior.
+    try { await startJob(monitorKey, options); } catch (_) {}
+    let result;
     try {
-      const result = await func(...args);
-      await completeJob(monitorKey);
-      return result;
+      result = await func.apply(this, args);
     } catch (error) {
-      await failJob(monitorKey, error.message);
+      try { await failJob(monitorKey, failureMessage(error)); } catch (_) {}
       throw error; // Re-raise to preserve original behavior
     }
+    try { await completeJob(monitorKey); } catch (_) {}
+    return result;
   };
+}
+
+function failureMessage(error) {
+  try {
+    if (typeof error === 'string') return error;
+    if (error && typeof error.message === 'string') return error.message;
+  } catch (_) {
+    // A job may throw any value, including an object with a throwing getter.
+  }
+  return 'Job failed';
+}
+
+function resolveGracePeriod(value) {
+  if (value == null) return DEFAULT_GRACE_PERIOD_SECONDS;
+  if (!Number.isInteger(value) || value < 60 || value > 2147483647) {
+    throw new RangeError('gracePeriod must be a whole number of seconds between 60 and 2147483647.');
+  }
+  return value;
 }
 
 /**
@@ -181,7 +202,7 @@ async function syncMonitor(monitorKey, schedule, options = {}) {
         key: monitorKey,
         name,
         schedule,
-        gracePeriod: DEFAULT_GRACE_PERIOD_SECONDS
+        gracePeriod: resolveGracePeriod(options.gracePeriod)
       }]
     };
 
@@ -227,7 +248,7 @@ async function syncMonitors(monitors, options = {}) {
         key: m.key,
         name: m.name || generateReadableName(m.key),
         schedule: m.schedule,
-        gracePeriod: m.gracePeriod != null ? m.gracePeriod : DEFAULT_GRACE_PERIOD_SECONDS
+        gracePeriod: resolveGracePeriod(m.gracePeriod)
       }));
 
     const apiKey = process.env[API_KEY_ENV_VAR] || '';
@@ -301,6 +322,9 @@ async function sendLifecyclePing(monitorKey, endpoint, apiKey, options = {}) {
     const params = new URLSearchParams();
     if (options.schedule) {
       params.append('schedule', options.schedule);
+    }
+    if (options.gracePeriod != null) {
+      params.append('gracePeriod', resolveGracePeriod(options.gracePeriod).toString());
     }
     if (options.message) {
       params.append('message', options.message);

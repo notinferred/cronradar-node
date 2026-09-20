@@ -5,7 +5,8 @@
   "main": "src/index.js",
   "types": "src/index.d.ts",
   "scripts": {
-    "test": "node --test"
+    "test": "node --test",
+    "test:types": "tsc --noEmit --strict --target ES2020 --moduleResolution node tests/types.ts"
   },
   "keywords": [
     "cron",
@@ -40,6 +41,6 @@
   ],
   "devDependencies": {
     "nock": "^13.5.0",
-    "typescript": "^5.9.3"
+    "typescript": "5.9.3"
   }
 }

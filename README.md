@@ -97,17 +97,19 @@ await cronradar.monitor(key, { schedule });
 |---|---|---|---|
 | `key` | `string` | yes | Monitor key. Lowercase, kebab/snake/dot-case. Max 200 chars. |
 | `options.schedule` | `string` | optional | Standard 5-field cron expression. Required on the *first* ping for self-healing registration. |
+| `options.gracePeriod` | `number` | optional | Whole seconds, at least 60. Used when registering a missing monitor; defaults to 60. |
 
 Throws: never. Network errors and 4xx/5xx responses are caught and logged to `stderr`.
 
-Grace period is configured per-monitor on CronRadar (default 60 seconds, set via the dashboard or the `gracePeriod` field passed to `syncMonitor`). It's not a per-ping argument.
+Set `gracePeriod` with `schedule` when creating a monitor, or use `syncMonitor` to update an existing monitor. Invalid grace periods skip the monitoring request without interrupting your job.
 
-### `startJob(key)`
+### `startJob(key, options?)`
 
 Records that a job has begun executing. Returns `Promise<void>`.
 
 ```javascript
 await cronradar.startJob(key);
+await cronradar.startJob(key, { schedule: '0 2 * * *', gracePeriod: 300 });
 ```
 
 Used in conjunction with `completeJob` or `failJob` to measure duration and detect hung jobs.
@@ -151,29 +153,43 @@ await wrapped();
 | `key` | `string` | yes | Monitor key. |
 | `fn` | `() => Promise<T>` | yes | The async function to instrument. |
 | `options.schedule` | `string` | optional | Cron expression for self-healing registration. |
+| `options.gracePeriod` | `number` | optional | Whole seconds, at least 60, when creating a missing monitor. |
 
-The wrapped function returns whatever `fn` returns. If `fn` throws, the wrapper re-throws after recording the failure. Monitoring never swallows your exceptions.
+The wrapped function preserves its receiver (`this`), arguments, and result. If `fn` throws any value, the wrapper re-throws that exact value after attempting to record the failure. Monitoring errors never replace the job's result or exception.
 
-### `syncMonitor(key, options)`
+### `syncMonitor(key, schedule, options?)`
 
 Pre-registers a monitor without sending a ping. Used by framework extensions during application startup. Returns `Promise<void>`.
 
 ```javascript
-await cronradar.syncMonitor(key, {
-  schedule: '0 2 * * *',
+await cronradar.syncMonitor(key, '0 2 * * *', {
   source: 'node-cron',
-  name: 'Daily Backup'
+  name: 'Daily Backup',
+  gracePeriod: 300
 });
 ```
 
 | Parameter | Type | Required | Notes |
 |---|---|---|---|
 | `key` | `string` | yes | Monitor key. |
-| `options.schedule` | `string` | yes | Cron expression. |
+| `schedule` | `string` | yes | Cron expression. |
 | `options.source` | `string` | optional | Identifier for the framework or origin. |
 | `options.name` | `string` | optional | Human-readable display name. |
+| `options.gracePeriod` | `number` | optional | Whole seconds, at least 60. Defaults to 60. |
 
 Used internally by extensions; rarely needed in application code.
+
+### `syncMonitors(monitors, options?)`
+
+Declares the complete recurring-job registry for one source. Returns `Promise<void>` and never throws. Omitted jobs for that source may be paused; use `syncMonitor` for a partial update. Invalid grace values reject the entire request so they cannot accidentally remove a job.
+
+```javascript
+await cronradar.syncMonitors([
+  { key: 'daily-backup', schedule: '0 2 * * *', gracePeriod: 300 },
+], { source: 'internal-scheduler' });
+```
+
+Each monitor needs `key` and `schedule`; `name` and `gracePeriod` are optional. Options accept `source` and an optional integration `version`.
 
 ## Configuration
 

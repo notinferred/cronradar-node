@@ -75,11 +75,11 @@ export function failJob(monitorKey: string, message?: string | null): Promise<vo
  * @param options - Optional configuration (schedule for auto-registration)
  * @returns Wrapped function with the same call signature
  */
-export function wrap<TArgs extends unknown[], TReturn>(
+export function wrap<TThis, TArgs extends unknown[], TReturn>(
   monitorKey: string,
-  func: (...args: TArgs) => Promise<TReturn> | TReturn,
+  func: (this: TThis, ...args: TArgs) => Promise<TReturn> | TReturn,
   options?: MonitorOptions
-): (...args: TArgs) => Promise<TReturn>;
+): (this: TThis, ...args: TArgs) => Promise<TReturn>;
 
 /**
  * Pre-register a monitor with CronRadar, setting up expectations for when it should run.
@@ -94,4 +94,18 @@ export function syncMonitor(
   monitorKey: string,
   schedule: string,
   options?: SyncOptions
+): Promise<void>;
+
+export interface MonitorDefinition {
+  key: string;
+  schedule: string;
+  name?: string;
+  /** Whole seconds, at least 60. Defaults to 60. */
+  gracePeriod?: number;
+}
+
+/** Reconcile the complete recurring-job registry for one source. Never throws. */
+export function syncMonitors(
+  monitors: MonitorDefinition[],
+  options?: { source?: string; version?: string }
 ): Promise<void>;
