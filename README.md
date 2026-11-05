@@ -302,4 +302,4 @@ To replace a completion-only `monitor()` call, keep the same key and schedule, e
 
 ## License
 
-© 2026 [CronRadar](https://cronradar.com) · Proprietary — see [LICENSE](./LICENSE).
+© 2026 [CronRadar](https://cronradar.com) · MIT — see [LICENSE](./LICENSE).

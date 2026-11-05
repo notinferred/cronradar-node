@@ -21,7 +21,7 @@
     "heartbeat"
   ],
   "author": "CronRadar <support@cronradar.com>",
-  "license": "proprietary",
+  "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/cronradar/cronradar-node.git"
