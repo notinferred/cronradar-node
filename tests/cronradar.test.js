@@ -97,6 +97,22 @@ describe('CronRadar Node.js SDK', () => {
       assert.equal(scope.isDone(), true);
     });
 
+    it('accepts a 100-character key and skips a 101-character key with a warning', async () => {
+      const warnings = [];
+      console.error = (message) => warnings.push(message);
+      const scope = nock('https://cron.life')
+        .get(`/api/v1/ping/${'k'.repeat(100)}/test-api-key-123`)
+        .reply(200, 'OK');
+
+      await cronradar.monitor('k'.repeat(100));
+      await cronradar.monitor('k'.repeat(101));
+
+      assert.equal(scope.isDone(), true);
+      assert.deepEqual(warnings, [
+        '[CronRadar] Invalid monitor key: length 101 exceeds maximum of 100 characters.',
+      ]);
+    });
+
     it('should handle network errors gracefully', async () => {
       nock('https://cron.life')
         .get('/api/v1/ping/test-job/test-api-key-123')

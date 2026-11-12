@@ -1,6 +1,6 @@
 {
   "name": "cronradar",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Non-blocking lifecycle and heartbeat monitoring for Node.js scheduled jobs, with missed-run, failure, and stuck-run detection.",
   "main": "src/index.js",
   "types": "src/index.d.ts",

@@ -6,7 +6,7 @@
 const BASE_URL = 'https://cron.life';
 const DEFAULT_TIMEOUT_MS = 5000; // 5 seconds, matches DEFAULT_TIMEOUT_SECONDS in other SDKs
 const DEFAULT_GRACE_PERIOD_SECONDS = 60;
-const MAX_MONITOR_KEY_LENGTH = 200;
+const MAX_MONITOR_KEY_LENGTH = 100; // UTF-16 code units, as the server counts; String.length counts the same unit
 
 const API_KEY_ENV_VAR = 'CRONRADAR_API_KEY';
 const DEBUG_ENV_VAR = 'CRONRADAR_DEBUG';
